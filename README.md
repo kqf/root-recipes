@@ -5,6 +5,46 @@ There are tons of [libraries, wrappers, and projects](#Libraries) for `PyROOT` i
 This is a collection of hacks and recipes to be used when you **really** need to get things done and there's no option (or time) to install the environment, learn the new syntax.
 
 
+### Use contextmanagers
+```python
+import ROOT
+from contextlib import contextmanager
+
+
+def histogram():
+    hist = ROOT.TH1F('test_hist', 'test', 100, -3, 3)
+    hist.FillRandom("gaus")
+    return hist
+
+
+@contextmanager
+def ropen(filename, option="read"):
+    rfile = ROOT.TFile(filename, option)
+    yield rfile
+    rfile.Close()
+
+
+if __name__ == '__main__':
+    # Write
+    with ropen("test.root", option="recreate"):
+        ohist = histogram()
+        original_entries = ohist.GetEntries()
+        ohist.Write("test_hist")
+
+    # ROOT removed the object after exiting file
+    # NB and it's not None, but PyROOT_NoneTyp
+    print(ohist)
+
+    # Read
+    with ropen("test.root", option="open") as f:
+        hist = f.Get("test_hist")
+        assert hist is not None
+        assert hist.GetEntries() > 0
+        assert original_entries == hist.GetEntries()
+
+```
+
+
 ## Libraries
 There is solid support of python versions of ROOT modules in [scikit-hep](https://github.com/scikit-hep/), the most commonly used are
 
