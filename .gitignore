@@ -1,0 +1,7 @@
+*.py
+*.py.*
+*.pyc
+*.python-version
+
+*.root
+*.pdf
