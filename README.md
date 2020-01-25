@@ -127,6 +127,68 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+### How to draw bottom panel (basics)
+The best (simplest) option is to draw two separate plots on two separate canvases and don't split a canvas into several parts.
+However, such necessity might occur in real life. 
+Here is the code that achieves the minimum requirements:
+```python
+import ROOT
+from contextlib import contextmanager
+
+
+@contextmanager
+def canvas(name="c1", stop=True, oname=None, xsize=580, ysize=760):
+    canvas = ROOT.TCanvas(name, "canvas", xsize, ysize)
+    yield canvas
+    canvas.Update()
+
+    if oname is not None:
+        canvas.SaveAs(oname)
+    if not stop:
+        return
+    canvas.Connect("Closed()", "TApplication",
+                   ROOT.gApplication, "Terminate()")
+    ROOT.gApplication.Run(True)
+
+
+def panelplot(hist1, hist2, operation, bsize=0.3, stop=False, oname=None):
+    with canvas() as figure:
+        figure.Divide(1, 2, 0, 0)
+        top_pad = figure.cd(1)
+        top_pad.SetPad(0, bsize, 1, 1)
+        hist1.Draw()
+        hist2.Draw("same")
+        bottom_pad = figure.cd(2)
+        bottom_pad.SetPad(0, 0, 1, bsize)
+        result = operation(hist1, hist2)
+        result.Draw()
+
+
+def main():
+    # These functions are needed just to generate inputs
+    def ratio(a, b):
+        fraction = a.Clone()
+        fraction.Divide(b)
+        return fraction
+
+    def hist(name, npoints=1000):
+        hist = ROOT.TH1F(name, "{}; x (cm); counts".format(name), 100, -3, 3)
+        hist.FillRandom("gaus", npoints)
+        hist.SetStats(False)
+        return hist
+
+    numerator = hist("numerator")
+    numerator.SetLineColor(ROOT.kRed + 1)
+
+    denominator = hist("denominator")
+    denominator.SetLineColor(ROOT.kBlue + 1)
+    panelplot(numerator, denominator, operation=ratio, oname="basic.pdf")
+
+
+if __name__ == '__main__':
+    main()
+```
+It's far from perfect (overlapping axes, different font sizes etc.), but it's a good starting point to create own layout.
 
 ## Libraries
 There is solid support of python versions of ROOT modules in [scikit-hep](https://github.com/scikit-hep/), the most commonly used are
