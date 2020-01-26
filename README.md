@@ -127,10 +127,9 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-### How to draw bottom panel (basics)
-The best (simplest) option is to draw two separate plots on two separate canvases and don't split a canvas into several parts.
-However, such necessity might occur in real life. 
-Here is the code that achieves the minimum requirements:
+### How to draw bottom panel (ratio plot)
+The best (simplest) option is to draw two separate plots on two separate canvases and never split a canvas into several parts. However, such necessity might occur in real life.
+Here is the code that does this:
 ```python
 import ROOT
 from contextlib import contextmanager
@@ -141,7 +140,6 @@ def canvas(name="c1", stop=True, oname=None, xsize=580, ysize=760):
     canvas = ROOT.TCanvas(name, "canvas", xsize, ysize)
     yield canvas
     canvas.Update()
-
     if oname is not None:
         canvas.SaveAs(oname)
     if not stop:
@@ -151,26 +149,52 @@ def canvas(name="c1", stop=True, oname=None, xsize=580, ysize=760):
     ROOT.gApplication.Run(True)
 
 
-def panelplot(hist1, hist2, operation, bsize=0.3, stop=False, oname=None):
+def panelplot(top, bottom, xtitle, ytitlet, ytitleb, stop=False, oname=None):
     with canvas() as figure:
+        figure.SetMargin(0.1, 0.05, 0.12, 0.05)
         figure.Divide(1, 2, 0, 0)
+
         top_pad = figure.cd(1)
-        top_pad.SetPad(0, bsize, 1, 1)
-        hist1.Draw()
-        hist2.Draw("same")
+        top_pad.SetPad(0, 0.3, 1, 1)  # (x0, y0, x1, y1)
+        top_pad.SetMargin(0.1, 0.05, 0.0, 0.05)  # (left, right, bottom, top)
+        top_pad.SetTicks(1, 1)
+
+        top_hists = ROOT.THStack()
+        for hist in top:
+            top_hists.Add(hist)
+        top_hists.Draw("nostack")
+        top_hists.GetXaxis().SetTitle(xtitle)
+        top_hists.GetXaxis().SetTitleOffset(1.2)
+        top_hists.GetXaxis().SetMoreLogLabels(True)
+        top_hists.GetYaxis().SetTitle(ytitlet)
+        top_hists.GetYaxis().SetTitleSize(0.04)
+        top_hists.GetYaxis().SetTitleOffset(1.2)
+
         bottom_pad = figure.cd(2)
-        bottom_pad.SetPad(0, 0, 1, bsize)
-        result = operation(hist1, hist2)
-        result.Draw()
+        bottom_pad.SetPad(0, 0, 1, 0.3)
+        bottom_pad.SetMargin(0.1, 0.05, 0.2, 0.0)  # (left, right, bottom, top)
+        bottom_pad.SetTicks(1, 1)
+
+        bottom_hists = ROOT.THStack()
+        for hist in bottom:
+            bottom_hists.Add(hist)
+        bottom_hists.Draw("nostack")
+        bottom_hists.GetXaxis().SetTitle(xtitle)
+        bottom_hists.GetXaxis().SetTitleOffset(1.2)
+        bottom_hists.GetXaxis().SetMoreLogLabels(True)
+        bottom_hists.GetXaxis().SetTitleSize(0.08)
+        bottom_hists.GetXaxis().SetLabelSize(0.08)
+        bottom_hists.GetYaxis().SetTitle(ytitleb)
+        bottom_hists.GetYaxis().SetTitleSize(0.04)
+        bottom_hists.GetYaxis().SetTitleOffset(1.2)
+        bottom_hists.GetYaxis().SetTitleOffset(0.5)
+        bottom_hists.GetYaxis().SetTitleSize(0.08)
+        bottom_hists.GetYaxis().SetLabelSize(0.08)
+        bottom_hists.GetYaxis().CenterTitle()
 
 
 def main():
-    # These functions are needed just to generate inputs
-    def ratio(a, b):
-        fraction = a.Clone()
-        fraction.Divide(b)
-        return fraction
-
+    # This function is needed just to generate inputs
     def hist(name, npoints=1000):
         hist = ROOT.TH1F(name, "{}; x (cm); counts".format(name), 100, -3, 3)
         hist.FillRandom("gaus", npoints)
@@ -182,20 +206,36 @@ def main():
 
     denominator = hist("denominator")
     denominator.SetLineColor(ROOT.kBlue + 1)
-    panelplot(numerator, denominator, operation=ratio, oname="basic.pdf")
+
+    fraction = numerator.Clone()
+    fraction.Divide(denominator)
+    panelplot(
+        top=[numerator, denominator],
+        bottom=[fraction],
+        xtitle="x distance (cm)",
+        ytitlet="counts",
+        ytitleb="Data/Theory",
+        oname="basic.pdf"
+    )
 
 
 if __name__ == '__main__':
     main()
 ```
-It's far from perfect (overlapping axes, different font sizes etc.), but it's a good starting point to create own layout.
+It's a good starting point to create own layout. The main tricks are margins (to align the pads) and `THstack` configurations to adjust fonts. It turns out that `THstack` shares lots of properties with `TH1`, and axes can be configured using stacks (which is weird).
+All "magic" numbers within the `panelplot` definition are indeed magic (don't change them unless you know what you are doing).
 
 ## Libraries
 There is solid support of python versions of ROOT modules in [scikit-hep](https://github.com/scikit-hep/), the most commonly used are
 
-| library |         |
-|---------| ------- |
-|[`rootpy`](https://github.com/rootpy/rootpy)| Most of the cases are covered here. It might not work in some environments, and docs are "still under construction".|
-|[`uproot`](https://github.com/scikit-hep/uproot)| It handles some basic objects and there's no need to install ROOT library. It's very neat, but not useful (so far) if you have collections in your `*.root` files.|
-|[`root_numpy`](https://github.com/scikit-hep/root_numpy)| Handy converters from `numpy.arrays` to various ROOT types . Requires `root` and sometimes may fail in nonstandard environments|
-|[`root_pandas`](https://github.com/scikit-hep/root_pandas)| The same for pandas|
+| library |         | |---------| ------- |
+|[`rootpy`](https://github.com/rootpy/rootpy)| Most of the cases are covered
+here. It might not work in some environments, and docs are "still under
+construction".| |[`uproot`](https://github.com/scikit-hep/uproot)| It handles
+some basic objects and there's no need to install ROOT library. It's very neat,
+but not useful (so far) if you have collections in your `*.root` files.|
+|[`root_numpy`](https://github.com/scikit-hep/root_numpy)| Handy converters from
+`numpy.arrays` to various ROOT types . Requires `root` and sometimes may fail in
+nonstandard environments|
+|[`root_pandas`](https://github.com/scikit-hep/root_pandas)| The same for
+pandas|
