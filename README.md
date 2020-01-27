@@ -83,19 +83,16 @@ from contextlib import contextmanager
 @contextmanager
 def canvas(name="c1", stop=True, oname=None, xsize=580, ysize=760):
     canvas = ROOT.TCanvas(name, "canvas", xsize, ysize)
-    # This is useless if you are making multiplots (like in example below)
-    canvas.SetTickx()
-    canvas.SetTicky()
-    canvas.SetGridx()
-    canvas.SetGridy()
-
     yield canvas
+
     # Update the canvas before it's rendered
     canvas.Update()
 
     # Save the image first if needed
     if oname is not None:
         canvas.SaveAs(oname)
+
+    # Don't interrupt the script flow
     if not stop:
         return
     # Run a TApplication, that listens to events, such as mouse clicks
@@ -107,25 +104,20 @@ def canvas(name="c1", stop=True, oname=None, xsize=580, ysize=760):
 
 def main():
     with canvas(stop=True, oname="test.pdf", xsize=760) as figure:
-        # Figure is just a normal TCanvas
-        figure.Divide(2, 1)
-        figure.cd(1)
+        figure.SetTickx()
+        figure.SetTicky()
+        figure.SetGridx()
+        figure.SetGridy()
 
         hist1 = ROOT.TH1F("test1", "test 1; x (cm); counts", 100, -3, 3)
         hist1.FillRandom("gaus")
         hist1.SetStats(False)
         hist1.Draw()
 
-        figure.cd(2)
-        hist2 = ROOT.TH1F("test2", "test 2; x (cm); counts", 100, -3, 3)
-        hist2.FillRandom("gaus", 1000)
-        hist2.SetStats(False)
-        hist2.Draw()
-        figure.cd()
-
 
 if __name__ == "__main__":
     main()
+
 ```
 ### How to draw bottom panel (ratio plot)
 The best (simplest) option is to draw two separate plots on two separate canvases and never split a canvas into several parts. However, such necessity might occur in real life.
@@ -149,7 +141,7 @@ def canvas(name="c1", stop=True, oname=None, xsize=580, ysize=760):
     ROOT.gApplication.Run(True)
 
 
-def panelplot(top, bottom, xtitle, ytitlet, ytitleb, stop=False, oname=None):
+def bipanel(top, bottom, xtitle, ytitlet, ytitleb, stop=False, oname=None):
     with canvas() as figure:
         figure.SetMargin(0.1, 0.05, 0.12, 0.05)
         figure.Divide(1, 2, 0, 0)
@@ -209,7 +201,7 @@ def main():
 
     fraction = numerator.Clone()
     fraction.Divide(denominator)
-    panelplot(
+    bipanel(
         top=[numerator, denominator],
         bottom=[fraction],
         xtitle="x distance (cm)",
@@ -223,7 +215,7 @@ if __name__ == '__main__':
     main()
 ```
 It's a good starting point to create own layout. The main tricks are margins (to align the pads) and `THstack` configurations to adjust fonts. It turns out that `THstack` shares lots of properties with `TH1`, and axes can be configured using stacks (which is weird).
-All "magic" numbers within the `panelplot` definition are indeed magic (don't change them unless you know what you are doing).
+All "magic" numbers within the `bipanel` definition are indeed magic (don't change them unless you know what you are doing).
 
 ## Libraries
 There is solid support of python versions of ROOT modules in [scikit-hep](https://github.com/scikit-hep/), the most commonly used are
