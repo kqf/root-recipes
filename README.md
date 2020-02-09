@@ -290,6 +290,73 @@ pip install repoze.lru
 ```
 It works with python3 as well and the interface is the same as for `functools`.
 
+### Nice-looking palette from `seaborn` (defining colors)
+Another hack possible with `lru_cache` is the definition of own colors. This particular example requires the installation of a `seaborn` library, but it can be replaced with hardcoded values as well. The color palettes in `ROOT` are not sequential. It's impossible to use just index in the for loop to get nice colors automatically
+```python
+import ROOT
+import seaborn as sns
+from contextlib import contextmanager
+from functools import lru_cache
+
+
+@contextmanager
+def canvas(name="c1", stop=True, oname=None, xsize=580, ysize=760):
+    canvas = ROOT.TCanvas(name, "canvas", xsize, ysize)
+    yield canvas
+    canvas.Update()
+    if oname is not None:
+        canvas.SaveAs(oname)
+    if not stop:
+        return
+    canvas.Connect("Closed()", "TApplication",
+                   ROOT.gApplication, "Terminate()")
+    ROOT.gApplication.Run(True)
+
+
+def frame(canvas, xmin, xmax, ymin, ymax):
+    frame = canvas.GetFrame()
+    frame = canvas.DrawFrame(xmin, ymin, xmax, ymax)
+    frame.SetXTitle("#varphi")
+    frame.GetXaxis().SetTitleOffset(1.2)
+    frame.SetYTitle("#it{f} (#varphi)")
+    frame.GetYaxis().SetTitleSize(0.04)
+    frame.GetYaxis().SetTitleOffset(1.2)
+
+
+@lru_cache(maxsize=1024)
+def define_color(r, g, b, alpha=1):
+    colorindex = ROOT.TColor.GetFreeColorIndex()
+    color = ROOT.TColor(colorindex, r, g, b)
+    return colorindex, color  # NB: TColor object is returned to be cached
+
+
+def colors(palette="tab10", n=10):
+    return [define_color(*p)[0] for p in sns.color_palette(palette, n)]
+
+
+def main():
+    functions = [
+        ROOT.TF1("f{}".format(i),
+                 "sin(x + {i} * .5) * (7 - {i})".format(i=i), 0, 14)
+        for i in range(1, 7)
+    ]
+    with canvas() as figure:
+        # Draw the common frame to fit all functions on the same plot
+        frame(figure, xmin=0, xmax=14, ymin=-7, ymax=7)
+
+        # Define colors
+        cols = colors(n=len(functions))
+        for col, function in zip(cols, functions):
+            function.Draw("same")
+            function.SetLineColor(col)
+            function.SetLineWidth(3)
+
+
+if __name__ == "__main__":
+    main()
+``` 
+This code should be used for plotting only. The metadata (like color codes) are not stored in the `ROOT` files. This has some justification (saves up to `3 * 8` bytes! per primitive) in theory, but is pretty useless on practice. The objects that are saved with custom colors, will be transparent (why not some default colors?) after reading them in a new session/program call.
+
 ## Libraries
 There is solid support of python versions of ROOT modules in [scikit-hep](https://github.com/scikit-hep/), the most commonly used are
 
