@@ -357,6 +357,80 @@ if __name__ == "__main__":
 ``` 
 This code should be used for plotting only. The metadata (like color codes) are not stored in the `ROOT` files. This has some justification (saves up to `3 * 8` bytes! per primitive) in theory, but is pretty useless on practice. The objects that are saved with custom colors, will be transparent (why not some default colors?) after reading them in a new session/program call.
 
+### Singledispatch
+Python doesn't have function signatures and it's impossible to have two methods with the same name. This compicates the code that involves `ROOT` objects that quite often have inconsistent interfaces. There is a built-in (standard library) mechanism that allows method redefinition.
+In this example we want to define a dedicated `decorate` function that has different impact on histograms and functions. Such method allows creation of the generic plotting functions that accept different types
+```python
+import ROOT
+from contextlib import contextmanager
+from functools import singledispatch
+
+
+@contextmanager
+def canvas(name="c1", stop=True, oname=None, xsize=580, ysize=760):
+    canvas = ROOT.TCanvas(name, "canvas", xsize, ysize)
+    yield canvas
+    canvas.Update()
+    if oname is not None:
+        canvas.SaveAs(oname)
+    if not stop:
+        return
+    canvas.Connect("Closed()", "TApplication",
+                   ROOT.gApplication, "Terminate()")
+    ROOT.gApplication.Run(True)
+
+
+@singledispatch
+def decorate(primitive):                                     # <<<<<<
+    primitive.SetMarkerStyle(20)
+    primitive.SetMarkerSize(1)
+    primitive.SetMarkerColor(ROOT.kRed + 1)
+
+
+@decorate.register(ROOT.TF1)                                 # <<<<<<
+def _(primitive):
+    primitive.SetLineWidth(2)
+    primitive.SetLineStyle(9)
+    primitive.SetLineColor(ROOT.kBlue + 1)
+
+
+def plot(primitives, xtitle, ytitle, xlimits, ylimits):
+    with canvas() as figure:
+        figure.SetTicks(1, 1)
+        frame = figure.GetFrame()
+        xmin, xmax = xlimits
+        ymin, ymax = ylimits
+        frame = figure.DrawFrame(xmin, ymin, xmax, ymax)
+        frame.SetXTitle(xtitle)
+        frame.GetXaxis().SetTitleOffset(1.2)
+        frame.SetYTitle(ytitle)
+        frame.GetYaxis().SetTitleSize(0.04)
+        frame.GetYaxis().SetTitleOffset(1.2)
+
+        for primitive in primitives:
+            decorate(primitive)                              # <<<<<<
+            primitive.Draw("same")
+
+
+def main():
+    func = ROOT.TF1("func", "sin(x + 1.5) + 1", 0, 14)
+    hist = ROOT.TH1F("hist", "test", 100, 0, 14)
+    hist.FillRandom("func", 100000)
+    hist.Scale(100. / hist.Integral())
+    plot(
+        [func, hist],
+        xlimits=(0, 14),
+        ylimits=(-1, 3),
+        xtitle="#it{t} (seconds)",
+        ytitle="#it{L} (#it{c} #tau)",
+    )
+
+
+if __name__ == "__main__":
+    main()
+```
+There is a limitation with `singledispatch`. It works only for the first positional argument. For example `ratio(a, b)` requires the types for both parameters to be validated. This can be achieved with [multimethod](https://github.com/coady/multimethod) library that has quite similar interface.
+
 ## Libraries
 There is solid support of python versions of ROOT modules in [scikit-hep](https://github.com/scikit-hep/), the most commonly used are
 
