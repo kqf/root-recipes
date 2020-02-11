@@ -4,6 +4,16 @@ CERN's ROOT is a library for analyzing data, but sometimes it gets really diffic
 There are tons of [libraries, wrappers, and projects](#Libraries) for `PyROOT` intended to simplify your work.
 This is a collection of hacks and recipes to be used when you **really** need to get things done and there's no option (or time) to install the environment, learn the new syntax.
 
+## Table of Contents
+
+- [Context managers](#use-contextmanagers)
+- [Local histograms](#attributeerror-pyroot_nonetype-object-has-no-attribute)
+- [Drawing with `PyROOT`](#drawing-a-canvas-with-pyroot)
+- [Bottom panel plots](#how-to-draw-bottom-panel-ratio-plot)
+- [`lru_cache`](#how-to-draw-lines-and-texts-caching-hack)
+- [Defining colors (`lru_cache` v2)](#nice-looking-palette-from-seaborn-defining-colors)
+- [Function overloading](#singledispatch)
+
 ### Use contextmanagers
 ```python
 import ROOT
