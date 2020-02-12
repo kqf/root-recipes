@@ -441,6 +441,47 @@ if __name__ == "__main__":
 ```
 There is a limitation with `singledispatch`. It works only for the first positional argument. For example `ratio(a, b)` requires the types for both parameters to be validated. This can be achieved with [multimethod](https://github.com/coady/multimethod) library that has quite similar interface.
 
+### Persistent cache (joblib)
+Usually, if one needs to plot the results of heavy, CPU intensive and time consuming computation on writes it in a separate `ROOT` file and then read this object each time they need to adjust the plot. This clutters the filesystem and it becomes difficult to track all those files
+```python
+import ROOT
+import joblib
+
+memory = joblib.Memory(location='.joblib-cache/', verbose=0)
+
+
+@memory.cache()                                              # <<<<<<
+def heavy_histogram(entries):
+    print("Time consuming computation")                      # <<<<<<
+    hist = ROOT.TH1F("cached", "hist", 100, 0, 100)
+    hist.FillRandom("gaus", entries)
+    return hist
+
+
+def main():
+    hist = heavy_histogram(entries=137)                      # <<<<<<
+    print(hist.GetName(), hist.GetTitle(), hist.GetEntries())
+
+
+if __name__ == "__main__":
+    main()
+
+```
+The cache is calculated each time a new value is passed as an argument to the decorated function. To see the effect one needs to run the script multiple times:
+```bash
+# This time "Time consuming computation" will be prompted
+python script.py
+
+# Second time the prompt will be missing. Joblib retrives cached object
+python script.py
+```
+The downsides of this method is you need to remember that you are using the cache, and your package should be installed separately:
+```bash
+pip install joblib --user
+```
+The main difference between `lru_cache` and `joblib.Memory.cache` is that the first stores the results only in the program and the functions will be recalculated each time one starts a new program.
+
+
 ## Libraries
 There is solid support of python versions of ROOT modules in [scikit-hep](https://github.com/scikit-hep/), the most commonly used are
 

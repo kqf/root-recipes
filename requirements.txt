@@ -1,3 +1,4 @@
 excode
 pytest
 seaborn
+joblib
