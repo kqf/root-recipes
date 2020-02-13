@@ -13,6 +13,9 @@ This is a collection of hacks and recipes to be used when you **really** need to
 - [`lru_cache`](#how-to-draw-lines-and-texts-caching-hack)
 - [Defining colors (`lru_cache` v2)](#nice-looking-palette-from-seaborn-defining-colors)
 - [Function overloading](#singledispatch)
+- [Persistent cache `*`](#persistent-cache-joblib)
+
+Sections marked with `*` require installation of additional libraries.
 
 ### Use contextmanagers
 ```python
@@ -294,7 +297,7 @@ if __name__ == '__main__':
     main()
 
 ```
-The lines and text will disappear if one removes the decorators `@lru_cache(maxsize=1024)`. This code tells python to store the output of functions `vline` and `caption` in somewhere the memory of a program and it's released when the program ends. It's a hack since `lru_cache` is usually used to save some time while doing expensive computations. When called multiple times with the same parameters, the cached object will be returned. In this solution, such speedup is a rather useful side-effect. The `maxsize=1024` is just an arbitrary parameter if you have more than `1024` calls of the decorated function the object cached earlier will be deleted. It's quite improbable that someone will draw `1024` primitives on the same canvas, so the effect will not be noticed. For python2 users there is an external library that can be installed with
+The lines and text will disappear if one removes the decorators `@lru_cache(maxsize=1024)`. This code tells python to store the output of functions `vline` and `caption` in somewhere the memory of a program and it's released when the program ends. It's a hack since `lru_cache` is usually used to save some time while doing expensive computations. When called multiple times with the same parameters, the cached object will be returned. In this solution, such speedup is a rather useful side-effect. The `maxsize=1024` is just an arbitrary parameter if you have more than `1024` calls of the decorated function the object cached earlier will be deleted. It's quite improbable that someone will draw `1024` primitives on the same canvas, so the effect will not be noticed. For python2 users, there is an external library that can be installed with
 ```bash
 pip install repoze.lru
 ```
@@ -368,8 +371,8 @@ if __name__ == "__main__":
 This code should be used for plotting only. The metadata (like color codes) are not stored in the `ROOT` files. This has some justification (saves up to `3 * 8` bytes! per primitive) in theory, but is pretty useless on practice. The objects that are saved with custom colors, will be transparent (why not some default colors?) after reading them in a new session/program call.
 
 ### Singledispatch
-Python doesn't have function signatures and it's impossible to have two methods with the same name. This compicates the code that involves `ROOT` objects that quite often have inconsistent interfaces. There is a built-in (standard library) mechanism that allows method redefinition.
-In this example we want to define a dedicated `decorate` function that has different impact on histograms and functions. Such method allows creation of the generic plotting functions that accept different types
+Python doesn't have function signatures and it's impossible to have two methods with the same name. This complicates the code that involves `ROOT` objects that quite often have inconsistent interfaces. There is a built-in (standard library) mechanism that allows method redefinition.
+In this example, we want to define a dedicated `decorate` function that has a different impact on histograms and functions. Such a method allows the creation of the generic plotting functions that accept different types
 ```python
 import ROOT
 from contextlib import contextmanager
@@ -439,10 +442,10 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-There is a limitation with `singledispatch`. It works only for the first positional argument. For example `ratio(a, b)` requires the types for both parameters to be validated. This can be achieved with [multimethod](https://github.com/coady/multimethod) library that has quite similar interface.
+There is a limitation with `singledispatch`. It works only for the first positional argument. For example `ratio(a, b)` requires the types for both parameters to be validated. This can be achieved with [multimethod](https://github.com/coady/multimethod) library that has a quite similar interface.
 
 ### Persistent cache (joblib)
-Usually, if one needs to plot the results of heavy, CPU intensive and time consuming computation on writes it in a separate `ROOT` file and then read this object each time they need to adjust the plot. This clutters the filesystem and it becomes difficult to track all those files
+Usually, if one needs to plot the results of heavy, CPU intensive and time-consuming computation one writes it in a separate `ROOT` file and then read this object each time they need to adjust the plot. This clutters the filesystem and it becomes difficult to track all those files
 ```python
 import ROOT
 import joblib
@@ -469,10 +472,10 @@ if __name__ == "__main__":
 ```
 The cache is calculated each time a new value is passed as an argument to the decorated function. To see the effect one needs to run the script multiple times:
 ```bash
-# This time "Time consuming computation" will be prompted
+# This time "Time-consuming computation" will be prompted
 python script.py
 
-# Second time the prompt will be missing. Joblib retrives cached object
+# Second time the prompt will be missing. Joblib retrieves the cached object
 python script.py
 ```
 The downsides of this method is you need to remember that you are using the cache, and your package should be installed separately:
