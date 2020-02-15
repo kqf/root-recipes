@@ -6,6 +6,7 @@ This is a collection of hacks and recipes to be used when you **really** need to
 
 ## Table of Contents
 
+- [Running from docker](#getting-root)
 - [Context managers](#use-contextmanagers)
 - [Local histograms](#attributeerror-pyroot_nonetype-object-has-no-attribute)
 - [Drawing with `PyROOT`](#drawing-a-canvas-with-pyroot)
@@ -16,6 +17,30 @@ This is a collection of hacks and recipes to be used when you **really** need to
 - [Persistent cache `*`](#persistent-cache-joblib)
 
 Sections marked with `*` require installation of additional libraries.
+
+### Getting `ROOT`
+The installation of the `ROOT` framework strongly depends on the system. The packaged versions are available for most of the modern operating systems. Sometimes it is necessary to have some additional libraries and environments that can impact the entire system. The updates on such systems are rarely installed as this may crash the environment. To isolate the environment from the main system one can use Docker containers. It works smoothly, but there is a problem of integration with `X11`. Here is a convenience script that starts a docker container and enables graphics
+```bash
+# file ~/.bash_profile
+function rootenv()
+{
+    ip=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
+    xhost + ${ip}
+    docker run -it --rm \
+       -e DISPLAY=${ip}:0 \
+       -v /tmp/.X11-unix:/tmp/.X11-unix \
+       -v ${PWD}:/home/ \
+       -w /home \
+       akqf/root-python3  # this can be replaced with any other image
+} 
+```
+The image `akqf/root-python3` can be replaced with any other image that with `ROOT` package installed. This is how it can be used:
+```python
+cd ~/path/to/my/root/code
+rootenv
+```
+This will start a new bash inside a docker container. One of the possible caveats is that all root windows in the examples below should be clossed only by clicking at `File -> Quit ROOT` menu button.
+
 
 ### Use contextmanagers
 ```python
