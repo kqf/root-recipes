@@ -35,7 +35,7 @@ function rootenv()
 } 
 ```
 The image `akqf/root-python3` can be replaced with any other image that with `ROOT` package installed. This is how it can be used:
-```python
+```bash
 cd ~/path/to/my/root/code
 rootenv
 ```
