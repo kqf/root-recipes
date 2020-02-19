@@ -516,6 +516,6 @@ There is solid support of python versions of ROOT modules in [scikit-hep](https:
 | library |         |
 |---------| ------- |
 |[`rootpy`](https://github.com/rootpy/rootpy)| Most of the cases are covered here. It might not work in some environments, and docs are "still under construction".|
-|[`uproot`](https://github.com/scikit-hep/uproot)| It handles some basic objects and there's no need to install ROOT library. It's very neat, but not useful (so far) if you have collections in your `*.root` files.|
+|[`uproot`](https://github.com/scikit-hep/uproot)| It handles some basic objects and there's no need to install ROOT library for IO operations. It's very neat, but not useful (so far) if you still need full `ROOT` experience (plotting, multidimensional histograms, fitting, etc).|
 |[`root_numpy`](https://github.com/scikit-hep/root_numpy)| Handy converters from `numpy.arrays` to various ROOT types . Requires `root` and sometimes may fail in nonstandard environments|
 |[`root_pandas`](https://github.com/scikit-hep/root_pandas)| The same for pandas|
